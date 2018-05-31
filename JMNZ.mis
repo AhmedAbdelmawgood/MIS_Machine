@@ -1,0 +1,9 @@
+VAR $mystring, STRING,100,"Hello world MIS:"
+VAR $counter1,NUMERIC,10
+LABEL LOOP1
+OUT "Thread 1 "
+OUT $mystring
+OUT $counter1
+OUT "ENDLINE"
+SUB $counter1,$counter1,1
+JMPNZ LOOP1,$counter1

@@ -1,0 +1,20 @@
+VAR $myint1	,		NUMERIC,0
+VAR $myint2,NUMERIC,	5
+VAR 		   $climb,	NUMERIC,0
+VAR 			$str,   STRING,20,"*"
+THREAD_BEGIN
+LABEL loop1
+ADD $myint1,		$myint1,		1
+
+
+ASSIGN 			   $climb,	0
+LABEL 			loop2
+OUT $str
+ADD $climb,$climb,1
+JMPLT loop2,$climb,$myint1
+OUT "ENDLINE"
+JMPLT loop1,$myint1,10
+OUT "ENDLINE"
+JMPLT loop1,$myint1,10
+THREAD_END
+BARRIER

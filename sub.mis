@@ -1,0 +1,7 @@
+VAR $mystring, STRING,100,"Hello world MIS:"
+VAR $counter1,NUMERIC,5
+OUT "ENDLINE"
+SUB $counter1,$counter1,1
+SUB $counter1,$counter1,1
+SUB $counter1,$counter1,1
+OUT $counter1

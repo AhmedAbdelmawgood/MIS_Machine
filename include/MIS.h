@@ -57,14 +57,15 @@ class MIS
         bool F_LabelExists(string label);
         int  F_LabelLine  (string label);
         void F_SetLabel   (string label, int line);
+        /** Explicit Locking and Locking **/
         bool F_Lock(string variableName, int P_ID);
         bool F_Unlock(string variableName, int P_ID);
-
-
+        /** Writes to Out stream **/
+        void F_WriteToOut (string variableName, char type = 'A');
         string V_FileName = "Machine";
+        /** Out and Error streams **/
         ostringstream *V_OutStream;
         ostringstream *V_ErrorStream;
-        void F_WriteToOut (string variableName, char type = 'A');
 
     private:
         /** Labels Map **/
@@ -82,12 +83,15 @@ class MIS
         int  V_FileSize;
         int  V_EOF;
         atomic<bool> error;
-        bool V_MainProgram;
         bool V_LabelError;
+        /** Error line and error message **/
         int  V_ErrorLine;
         string V_ErrorMessage;
+        /** Main Parser **/
         C_FileParser *MainParser;
+        /** Thread Collector to keep track of MISThreads **/
         C_ThreadCollector *V_ThreadCollector;
+        /** Out stream mutex **/
         pthread_mutex_t V_OutMutex;
         //SHAIMOU2A *SHOSHO;
 };

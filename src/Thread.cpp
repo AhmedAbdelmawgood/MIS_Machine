@@ -1,5 +1,6 @@
 #include "Thread.h"
 
+#include <bits/stdc++.h>
 // Modifier: Set thread running flag
 void Thread::setRunning (bool _running)
 {
@@ -107,8 +108,10 @@ void * Thread::run(void * arg)
 // Block until thread finishes execution
 void Thread::waitForRunToFinish ()
 {
+    std::cout << std::endl << "Trapped ye wlad el gazma" << std::endl;
 	pthread_mutex_lock(&mutex); // Lock mutex which will block in case the thread is running
 	pthread_mutex_unlock(&mutex);   // Unlock mutex as soon as it is acquired,which guarantees that the thread terminated
+    std::cout << std::endl << "OUT OF HHERER" << std::endl;
 }
 // Get Thread readable Identifier
 char * Thread::getThreadIdentifier ()
@@ -124,7 +127,9 @@ bool Thread::isAlive ()
 // Destructor
 Thread::~Thread()
 {
+    std::cout << "LOL"<<std::endl;
     pthread_attr_destroy(&pthread_attr);    // Destroy pthread attributes
     if ( started ) pthread_join (pthread,NULL); // Join on pthread if started
-    pthread_mutex_destroy(&mutex);  //Destroy execution control mutex
+    std::cout<<"try to destroy mutex " << pthread_mutex_destroy(&mutex);  //Destroy execution control mutex
+
 }

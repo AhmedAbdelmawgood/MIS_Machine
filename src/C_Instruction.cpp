@@ -1,6 +1,8 @@
 #include "C_Instruction.h"
 
+/** Static default value to give to constructor of descendant classes **/
 int C_Instruction::def = -1;
+
 C_Instruction::C_Instruction(){}
 
 C_Instruction::~C_Instruction(){}

@@ -92,5 +92,5 @@ Connection * Connection::getNextConnection (){return next_connection;}
 // Destructor: delete the TCP socket if set
 Connection::~Connection(){
     if ( V_Socket != NULL ) delete (V_Socket);
-    delete V_Machine;
+    if(V_Machine!= NULL)delete V_Machine;
     }

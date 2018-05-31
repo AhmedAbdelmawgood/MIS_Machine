@@ -49,14 +49,20 @@ MIS::MIS(): V_PC(0),error(false)
 
 MIS::~MIS()
 {
+    cout << "Destroyed"<<endl;
     if(MainParser!=0){
         delete MainParser;
+    }
+    if (V_ThreadCollector != 0){
+        delete V_ThreadCollector;
     }
     /** Deletes the values of the InstructionMap,
     which are objects of type C_Instruction **/
     for(auto &it : InstrucionsMap){
         delete it.second;
     }
+    /** Deletes the values of the Variable Maps,
+    which are objects of type C_Variable **/
     for(auto &it : RealMap){
         delete it.second;
     }
@@ -69,6 +75,7 @@ MIS::~MIS()
     for(auto &it : CharMap){
         delete it.second;
     }
+    pthread_mutex_destroy(&V_OutMutex);
 }
 
 /** Adds all labels before execution**/
@@ -136,12 +143,19 @@ void MIS::Run(int P_Start, int P_End, int P_ID){
                }
            }
            if (V_end != 0 ){
-                V_ThreadCollector->cleanup();
+                /** delete any finished threads **/
+                
+                //V_ThreadCollector->cleanup();
+                /** Create new thread, with current MIS, line after THREAD_BEGIN and line before THREAD_END**/
                 C_MISThread * misthread = new C_MISThread(this, PC+1, V_end);
+                /** Start Execution **/
                 misthread->F_StartThread();
+                /** Add thread Thread collector **/
                 V_ThreadCollector->addThread(misthread);
+                /** Update PC to after THREAD **/
                 PC = V_end;
             }
+            /** Error in THREAD **/
             else{
                 V_ErrorMessage = "In function THREAD_BEGIN: Cannot find THREAD_END, or syntax error.";
                 V_ErrorLine    = PC;
@@ -150,10 +164,13 @@ void MIS::Run(int P_Start, int P_End, int P_ID){
             }
         }
         else if (temp == "BARRIER" ){
-            if (true ){
+            if (P_ID == - 1){
+                /** This will join on all threads in the destructor **/
                 delete V_ThreadCollector;
+                /** Reset MISThread ID to 0 **/
                 C_MISThread::F_ResetIDs();
             }
+            /** Error in BARRIER **/
             else{
                 V_ErrorMessage = "In function Barrier: Called from inside a thread or syntax error.";
                 V_ErrorLine    = PC;
@@ -162,7 +179,7 @@ void MIS::Run(int P_Start, int P_End, int P_ID){
             }
         }
         else if (temp == "LOCK" ){
-            if (!F_Lock((*(MainParser->LinesInstrcts[PC]))[2], P_ID)){
+            if (!F_Lock((*(MainParser->LinesInstrcts[PC]))[2], P_ID)){ /** Could not lock **/
                 V_ErrorMessage = "In function LOCK: Called from outside a thread, variable does not exist or syntax error.";
                 V_ErrorLine    = PC;
                 F_ReportError();
@@ -170,7 +187,7 @@ void MIS::Run(int P_Start, int P_End, int P_ID){
             }
         }
         else if (temp == "UNLOCK"){
-            if (!F_Unlock((*(MainParser->LinesInstrcts[PC]))[2], P_ID)){
+            if (!F_Unlock((*(MainParser->LinesInstrcts[PC]))[2], P_ID)){ /** Could not unlock **/
                 V_ErrorMessage = "In function UNLOCK: Called from outside a thread, variable does not exist or syntax error.";
                 V_ErrorLine    = PC;
                 F_ReportError();
@@ -215,82 +232,104 @@ void MIS::Run(int P_Start, int P_End, int P_ID){
     return;
 }
 
+/** Method that writes to the out stream **/
 void MIS::F_WriteToOut(string variableName, char type)
 {
-    cout << "Got here " << variableName<< " " << type << endl;
+    /** Print a non-variable **/
     if (type == 'A'){
     pthread_mutex_lock(&V_OutMutex);
     (*V_OutStream) << variableName;
-    cout << type << " "<< pthread_mutex_unlock(&V_OutMutex)<<endl;
+    pthread_mutex_unlock(&V_OutMutex);
     return;
     }
+    /** Variable is a string **/
     if (type == 'S'){
     pthread_mutex_lock(&V_OutMutex);
+    /** Get string variable first **/
     (*V_OutStream) << F_GetStringV(variableName);
-    cout << type << " "<< pthread_mutex_unlock(&V_OutMutex);
+    pthread_mutex_unlock(&V_OutMutex);
     return;
     }
+    /** Variable is NUMERIC **/
     if (type == 'N'){
     pthread_mutex_lock(&V_OutMutex);
+    /** Get NUMERIC variable first **/
     (*V_OutStream) << F_GetNumericV(variableName);
-    cout << type << " "<< pthread_mutex_unlock(&V_OutMutex);
+    pthread_mutex_unlock(&V_OutMutex);
     return;
     }
+    /** Variable is REAL **/
     if (type == 'R'){
     pthread_mutex_lock(&V_OutMutex);
+    /** Get REAL variable first **/
     (*V_OutStream) << F_GetRealV(variableName);
-    cout << type << " "<< pthread_mutex_unlock(&V_OutMutex);
+    pthread_mutex_unlock(&V_OutMutex);
     return;
     }
+    /** Variable is CHAR **/
     if (type == 'C'){
     pthread_mutex_lock(&V_OutMutex);
+    /** Get CHAR variable first **/
     (*V_OutStream) << F_GetCharV(variableName);
-    cout << type << " " <<pthread_mutex_unlock(&V_OutMutex);
+    pthread_mutex_unlock(&V_OutMutex);
     return;
     }
 }
-
+/** Performs an explicit LOCK on a variable **/
 bool MIS::F_Lock(string variableName, int P_ID){
+    /** Lock invoked from outside a thread **/
     if (P_ID == -1) return false;
+    /** Variable is NUMERIC, LOCK it **/
     if (F_NumericVExists(variableName)){
         NumericMap[variableName]->F_Lock(P_ID);
         return true;
     }
+    /** Variable is REAL, LOCK it **/
     else if (F_RealVExists(variableName)){
         RealMap[variableName]->F_Lock(P_ID);
         return true;
     }
+    /** Variable is STRING, LOCK it **/
     else if (F_StringVExists(variableName)){
         StringMap[variableName]->F_Lock(P_ID);
         return true;
     }
+    /** Variable is CHAR, LOCK it **/
     else if (F_CharVExists(variableName)){
         CharMap[variableName]->F_Lock(P_ID);
         return true;
     }
+    /** Variable not found **/
     else {
         return false;
     }
 }
 
+/** Performs an explicit UNLOCK on a variable **/
 bool MIS::F_Unlock(string variableName, int P_ID){
+    /** Unlock invoked from outside a thread **/
     if (P_ID == -1) return false;
+    /** Variable is NUMERIC, UNLOCK it **/
     if (F_NumericVExists(variableName)){
         NumericMap[variableName]->F_Unlock(P_ID);
         return true;
     }
+    /** Variable is REAL, UNLOCK it **/
     else if (F_RealVExists(variableName)){
         RealMap[variableName]->F_Unlock(P_ID);
         return true;
     }
+    /** Variable is STRING, UNLOCK it **/
     else if (F_StringVExists(variableName)){
         StringMap[variableName]->F_Unlock(P_ID);
         return true;
     }
+    /** Variable is CHAR, UNLOCK it **/
     else if (F_CharVExists(variableName)){
         CharMap[variableName]->F_Unlock(P_ID);
         return true;
     }
+    /** Variable not found **/
     else {
         return false;
     }
